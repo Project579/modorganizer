@@ -3526,18 +3526,79 @@ void MainWindow::createModFromOverwrite()
     return;
   }
 
-  IModInterface *newMod = m_OrganizerCore.createMod(name);
+  const IModInterface *newMod = m_OrganizerCore.createMod(name);
   if (newMod == nullptr) {
     return;
   }
 
+  doMoveOverwriteContentToMod(newMod->absolutePath());
+}
+
+void MainWindow::moveOverwriteContentToExistingMod()
+{
+  QStringList mods;
+  auto indexesByPriority = m_OrganizerCore.currentProfile()->getAllIndexesByPriority();
+  for (auto & iter : indexesByPriority) {
+    if ((iter.second != UINT_MAX)) {
+      ModInfo::Ptr modInfo = ModInfo::getByIndex(iter.second);
+      if (!modInfo->hasFlag(ModInfo::FLAG_SEPARATOR) && !modInfo->hasFlag(ModInfo::FLAG_FOREIGN) && !modInfo->hasFlag(ModInfo::FLAG_OVERWRITE)) {
+        mods << modInfo->name();
+      }
+    }
+  }
+
+  ListDialog dialog(this);
+  QSettings &settings = m_OrganizerCore.settings().directInterface();
+  QString key = QString("geometry/%1").arg(dialog.objectName());
+
+  dialog.setWindowTitle("Select a mod...");
+  dialog.setChoices(mods);
+
+  if (settings.contains(key)) {
+    dialog.restoreGeometry(settings.value(key).toByteArray());
+  }
+  if (dialog.exec() == QDialog::Accepted) {
+
+    QString result = dialog.getChoice();
+    if (!result.isEmpty()) {
+
+      QString modAbsolutePath;
+
+      for (const auto& mod : m_OrganizerCore.modsSortedByProfilePriority()) {
+        if (result.compare(mod) == 0) {
+          ModInfo::Ptr modInfo = ModInfo::getByIndex(ModInfo::getIndex(mod));
+          modAbsolutePath = modInfo->absolutePath();
+          break;
+        }
+      }
+
+      if (modAbsolutePath.isNull()) {
+        qWarning("Mod %s has not been found, for some reason", qUtf8Printable(result));
+        return;
+      }
+
+      doMoveOverwriteContentToMod(modAbsolutePath);
+    }
+  }
+  settings.setValue(key, dialog.saveGeometry());
+}
+
+void MainWindow::doMoveOverwriteContentToMod(const QString &modAbsolutePath)
+{
   unsigned int overwriteIndex = ModInfo::findMod([](ModInfo::Ptr mod) -> bool {
     std::vector<ModInfo::EFlag> flags = mod->getFlags();
     return std::find(flags.begin(), flags.end(), ModInfo::FLAG_OVERWRITE) != flags.end(); });
 
   ModInfo::Ptr overwriteInfo = ModInfo::getByIndex(overwriteIndex);
-  shellMove(QStringList(QDir::toNativeSeparators(overwriteInfo->absolutePath()) + "\\*"),
-            QStringList(QDir::toNativeSeparators(newMod->absolutePath())), this);
+  bool successful = shellMove((QDir::toNativeSeparators(overwriteInfo->absolutePath()) + "\\*"),
+    (QDir::toNativeSeparators(modAbsolutePath)), false, this);
+
+  if (successful) {
+    MessageDialog::showMessage(tr("Move successful."), this);
+  }
+  else {
+    qCritical("Move operation failed: %s", qUtf8Printable(windowsErrorString(::GetLastError())));
+  }
 
   m_OrganizerCore.refreshModList();
 }
@@ -4389,6 +4450,7 @@ void MainWindow::on_modList_customContextMenuRequested(const QPoint &pos)
         if (QDir(info->absolutePath()).count() > 2) {
           menu->addAction(tr("Sync to Mods..."), &m_OrganizerCore, SLOT(syncOverwrite()));
           menu->addAction(tr("Create Mod..."), this, SLOT(createModFromOverwrite()));
+          menu->addAction(tr("Move content to Mod..."), this, SLOT(moveOverwriteContentToExistingMod()));
           menu->addAction(tr("Clear Overwrite..."), this, SLOT(clearOverwrite()));
         }
         menu->addAction(tr("Open in Explorer"), this, SLOT(openExplorer_clicked()));
@@ -6402,7 +6464,7 @@ void MainWindow::sendSelectedModsToSeparator_clicked()
     if ((iter->second != UINT_MAX)) {
       ModInfo::Ptr modInfo = ModInfo::getByIndex(iter->second);
       if (modInfo->hasFlag(ModInfo::FLAG_SEPARATOR)) {
-        separators << modInfo->name().chopped(10);
+        separators << modInfo->name().chopped(10);  // Chops the "_separator" away from the name
       }
     }
   }

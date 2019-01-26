@@ -155,8 +155,8 @@ QString ModList::getFlagText(ModInfo::EFlag flag, ModInfo::Ptr modInfo) const
       if (!modInfo->comments().isEmpty())
         output << QString("<i>%1</i>").arg(modInfo->comments());
       if (!modInfo->notes().isEmpty())
-        output << QString("<i>%1</i>").arg(modInfo->notes()).replace("\n", "<br>");
-      return output.join("<br>");
+        output << QString("<i>%1</i>").arg(modInfo->notes());
+      return output.join("");
     }
     case ModInfo::FLAG_CONFLICT_OVERWRITE: return tr("Overwrites loose files");
     case ModInfo::FLAG_CONFLICT_OVERWRITTEN: return tr("Overwritten loose files");
@@ -167,7 +167,8 @@ QString ModList::getFlagText(ModInfo::EFlag flag, ModInfo::Ptr modInfo) const
     case ModInfo::FLAG_ARCHIVE_CONFLICT_OVERWRITE: return tr("Overwrites another archive file");
     case ModInfo::FLAG_ARCHIVE_CONFLICT_OVERWRITTEN: return tr("Overwritten by another archive file");
     case ModInfo::FLAG_ARCHIVE_CONFLICT_MIXED: return tr("Archive files overwrites & overwritten");
-    case ModInfo::FLAG_ALTERNATE_GAME: return tr("This mod targets a different game");
+    case ModInfo::FLAG_ALTERNATE_GAME: return tr("<br>This mod is for a different game, "
+      "make sure it's compatible or it could cause crashes.");
     default: return "";
   }
 }
