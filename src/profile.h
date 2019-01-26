@@ -24,12 +24,14 @@ along with Mod Organizer.  If not, see <http://www.gnu.org/licenses/>.
 #include "modinfo.h"
 #include <iprofile.h>
 #include <delayedfilewriter.h>
+#include "executableinfo.h"
 
 #include <QByteArray>
 #include <QDir>
 #include <QObject>
 #include <QString>
 #include <QSettings>
+#include <QList>
 
 #include <boost/shared_ptr.hpp>
 
@@ -272,6 +274,16 @@ public:
   void setModEnabled(unsigned int index, bool enabled);
 
   /**
+   * @brief enable or disable multiple mods at once
+   * This is an abbreviated process and should be immediately followed by a full refresh
+   * to maintain data consistency.
+   *
+   * @param modsToEnable list of mod indicies to enable
+   * @param modsToDisable list of mod indicies to disable
+   **/
+  void setModsEnabled(const QList<unsigned int> &modsToEnable, const QList<unsigned int> &modsToDisable);
+
+  /**
    * change the priority of a mod. Of course this also changes the priority of other mods.
    * The priority of the mods in the range ]old, new priority] are shifted so that no gaps
    * are possible.
@@ -310,7 +322,19 @@ public:
   void removeSetting(const QString &section, const QString &name = QString());
   void removeSetting(const QString &name);
 
+  QVariantMap settingsByGroup(const QString &section) const;
+  void storeSettingsByGroup(const QString &section, const QVariantMap &values);
+
+  QList<QVariantMap> settingsByArray(const QString &prefix) const;
+  void storeSettingsByArray(const QString &prefix, const QList<QVariantMap> &values);
+
   int getPriorityMinimum() const;
+
+  bool forcedLibrariesEnabled(const QString &executable);
+  void setForcedLibrariesEnabled(const QString &executable, bool enabled);
+  QList<MOBase::ExecutableForcedLoadSetting> determineForcedLibraries(const QString &executable);
+  void storeForcedLibraries(const QString &executable, const QList<MOBase::ExecutableForcedLoadSetting> &values);
+  void removeForcedLibraries(const QString &executable);
 
 signals:
 
@@ -320,6 +344,13 @@ signals:
    * @param index index of the mod that changed
    **/
   void modStatusChanged(unsigned int index);
+
+  /**
+   * @brief emitted whenever the status (enabled/disabled) of multiple mods change
+   *
+   * @param index list of indices of the mods that changed
+   **/
+  void modStatusChanged(QList<unsigned int> index);
 
 public slots:
 

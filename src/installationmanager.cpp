@@ -579,6 +579,7 @@ bool InstallationManager::doInstall(GuessedValue<QString> &modName, QString game
 
   m_InstallationProgress = new QProgressDialog(m_ParentWidget);
   ON_BLOCK_EXIT([this] () {
+    m_InstallationProgress->cancel();
     m_InstallationProgress->hide();
     m_InstallationProgress->deleteLater();
     m_InstallationProgress = nullptr;
@@ -642,6 +643,9 @@ bool InstallationManager::doInstall(GuessedValue<QString> &modName, QString game
   settingsFile.setValue("installationFile", m_CurrentFile);
   settingsFile.setValue("repository", repository);
   settingsFile.setValue("url", m_URL);
+
+  //cleanup of m_URL or this will persist across installs.
+  m_URL = "";
 
   if (!merge) {
     // this does not clear the list we have in memory but the mod is going to have to be re-read anyway

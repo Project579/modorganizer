@@ -20,6 +20,7 @@
 #include <versioninfo.h>
 #include <delayedfilewriter.h>
 #include <boost/signals2.hpp>
+#include "executableinfo.h"
 
 class ModListSortProxy;
 class PluginListSortProxy;
@@ -135,26 +136,30 @@ public:
 
   void refreshDirectoryStructure();
   void updateModInDirectoryStructure(unsigned int index, ModInfo::Ptr modInfo);
+  void updateModsInDirectoryStructure(QMap<unsigned int, ModInfo::Ptr> modInfos);
 
   void doAfterLogin(const std::function<void()> &function) { m_PostLoginTasks.append(function); }
 
   void spawnBinary(const QFileInfo &binary, const QString &arguments = "",
                    const QDir &currentDirectory = QDir(),
                    const QString &steamAppID = "",
-                   const QString &customOverwrite = "");
+                   const QString &customOverwrite = "",
+                   const QList<MOBase::ExecutableForcedLoadSetting> &forcedLibraries = QList<MOBase::ExecutableForcedLoadSetting>());
 
   HANDLE spawnBinaryDirect(const QFileInfo &binary, const QString &arguments,
                            const QString &profileName,
                            const QDir &currentDirectory,
                            const QString &steamAppID,
                            const QString &customOverwrite,
+                           const QList<MOBase::ExecutableForcedLoadSetting> &forcedLibraries = QList<MOBase::ExecutableForcedLoadSetting>(),
                            LPDWORD exitCode = nullptr);
 
   HANDLE spawnBinaryProcess(const QFileInfo &binary, const QString &arguments,
                             const QString &profileName,
                             const QDir &currentDirectory,
                             const QString &steamAppID,
-                            const QString &customOverwrite);
+                            const QString &customOverwrite,
+                            const QList<MOBase::ExecutableForcedLoadSetting> &forcedLibraries = QList<MOBase::ExecutableForcedLoadSetting>());
 
   void loginSuccessfulUpdate(bool necessary);
   void loginFailedUpdate(const QString &message);
@@ -236,6 +241,7 @@ public slots:
   void installDownload(int downloadIndex);
 
   void modStatusChanged(unsigned int index);
+  void modStatusChanged(QList<unsigned int> index);
   void requestDownload(const QUrl &url, QNetworkReply *reply);
   void downloadRequestedNXM(const QString &url);
 
@@ -264,6 +270,7 @@ private:
   bool queryLogin(QString &username, QString &password);
 
   void updateModActiveState(int index, bool active);
+  void updateModsActiveState(const QList<unsigned int> &modIndices, bool active);
 
   bool testForSteam();
 
